@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Irrigation System - Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <header>
+    <h1>Smart Irrigation System</h1>
+    <div>
+      <span id="userName"></span>
+      <button class="small" onclick="logout()">Logout</button>
+    </div>
+  </header>
+
+  <main>
+    <p id="message" class="message"></p>
+
+    <!-- Add field form -->
+    <section class="card">
+      <h2>Add a field</h2>
+      <form id="fieldForm" class="row">
+        <input type="text" id="fName" placeholder="Field name" required>
+        <input type="text" id="fCrop" placeholder="Crop (Rice, Tomato...)" required>
+        <input type="number" id="fArea" placeholder="Area (acre)" step="0.1" value="1">
+        <input type="number" id="fThreshold" placeholder="Threshold %" value="35">
+        <button type="submit">Add field</button>
+      </form>
+    </section>
+
+    <!-- Fields table -->
+    <section class="card">
+      <div class="card-head">
+        <h2>My fields</h2>
+        <div>
+          <button class="small" onclick="simulate()">Take sensor reading</button>
+          <button class="small primary" onclick="runAuto()">Run auto irrigation</button>
+        </div>
+      </div>
+      <table id="fieldTable">
+        <thead>
+          <tr>
+            <th>Field</th><th>Crop</th><th>Moisture</th><th>Threshold</th>
+            <th>Status</th><th>Pump</th><th>Action</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <!-- History -->
+    <section class="card">
+      <h2>Irrigation history</h2>
+      <table id="logTable">
+        <thead><tr><th>Time</th><th>Field</th><th>Action</th><th>By</th><th>Moisture</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </section>
+  </main>
+
+  <script src="dashboard.js"></script>
+</body>
+</html>
