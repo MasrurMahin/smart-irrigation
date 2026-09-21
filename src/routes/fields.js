@@ -28,18 +28,39 @@ router.get('/fields', checkLogin, async (req, res) => {
 // add a new field
 router.post('/fields', checkLogin, async (req, res) => {
   const { name, crop, area, threshold } = req.body;
-  if (!name || !crop) return res.status(400).json({ error: 'Field name and crop are required.' });
+  if (!name || typeof name !== 'string' || !name.trim()) {
+    return res.status(400).json({ error: 'Field name is required.' });
+  }
+  if (!crop || typeof crop !== 'string' || !crop.trim()) {
+    return res.status(400).json({ error: 'Crop type is required.' });
+  }
+
+  const parsedArea = area !== undefined && area !== '' ? parseFloat(area) : 1.0;
+  if (isNaN(parsedArea) || parsedArea <= 0 || parsedArea > 999.99) {
+    return res.status(400).json({ error: 'Area must be a positive number up to 999.99 acres/hectares.' });
+  }
+
+  const parsedThreshold = threshold !== undefined && threshold !== '' ? parseInt(threshold, 10) : 35;
+  if (isNaN(parsedThreshold) || parsedThreshold < 1 || parsedThreshold > 100) {
+    return res.status(400).json({ error: 'Moisture threshold must be between 1% and 100%.' });
+  }
 
   await db.query(
     'INSERT INTO fields (user_id, name, crop, area, threshold) VALUES ($1, $2, $3, $4, $5)',
-    [req.session.userId, name, crop, area || 1, threshold || 35]
+    [req.session.userId, name.trim(), crop.trim(), parsedArea, parsedThreshold]
   );
   res.json({ message: 'Field added.' });
 });
 
-// delete a field
+// delete a field (verifies user ownership)
 router.delete('/fields/:id', checkLogin, async (req, res) => {
-  await db.query('DELETE FROM fields WHERE id = $1 AND user_id = $2', [req.params.id, req.session.userId]);
+  const result = await db.query(
+    'DELETE FROM fields WHERE id = $1 AND user_id = $2',
+    [req.params.id, req.session.userId]
+  );
+  if (result.rowCount === 0) {
+    return res.status(404).json({ error: 'Field not found or access denied.' });
+  }
   res.json({ message: 'Field deleted.' });
 });
 
