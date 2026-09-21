@@ -4,60 +4,215 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Smart Irrigation System - Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-  <header>
-    <h1>Smart Irrigation System</h1>
-    <div>
-      <span id="userName"></span>
-      <button class="small" onclick="logout()">Logout</button>
+  <!-- Top App Navigation -->
+  <header class="dashboard-header">
+    <div class="brand-group">
+      <div class="brand-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path>
+        </svg>
+      </div>
+      <div>
+        <h1>Smart Irrigation System</h1>
+        <div class="brand-tag">RUET &middot; CSE 3206 &middot; Group 23 Prototype</div>
+      </div>
+    </div>
+    <div class="user-control">
+      <div class="user-pill">
+        <span class="user-avatar">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
+        </span>
+        <span id="userName" class="user-name">Loading...</span>
+      </div>
+      <button class="small logout-btn" onclick="logout()" title="End session">Logout</button>
     </div>
   </header>
 
-  <main>
-    <p id="message" class="message"></p>
+  <main class="dashboard-container">
+    <!-- Status & Feedback Alert -->
+    <div id="message" class="message"></div>
 
-    <!-- Add field form -->
-    <section class="card">
-      <h2>Add a field</h2>
+    <!-- Quick Metrics Overview -->
+    <section class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-meta">
+          <span class="stat-label">Total Fields</span>
+          <span class="stat-icon fields-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="3" y1="9" x2="21" y2="9"></line>
+              <line x1="9" y1="21" x2="9" y2="9"></line>
+            </svg>
+          </span>
+        </div>
+        <div id="statTotalFields" class="stat-value">0</div>
+        <div class="stat-sub">Active plots registered</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-meta">
+          <span class="stat-label">Pumps Running</span>
+          <span class="stat-icon pump-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="23 4 23 10 17 10"></polyline>
+              <polyline points="1 20 1 14 7 14"></polyline>
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+            </svg>
+          </span>
+        </div>
+        <div id="statActivePumps" class="stat-value">0</div>
+        <div class="stat-sub"><span id="pumpPulseDot" class="live-dot"></span> Real-time pump status</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-meta">
+          <span class="stat-label">Dry Alert</span>
+          <span class="stat-icon alert-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+              <line x1="12" y1="9" x2="12" y2="13"></line>
+              <line x1="12" y1="17" x2="12.01" y2="17"></line>
+            </svg>
+          </span>
+        </div>
+        <div id="statDryFields" class="stat-value">0</div>
+        <div class="stat-sub">Below moisture threshold</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-meta">
+          <span class="stat-label">Irrigation Events</span>
+          <span class="stat-icon logs-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+            </svg>
+          </span>
+        </div>
+        <div id="statTotalLogs" class="stat-value">0</div>
+        <div class="stat-sub">Recent audit log count</div>
+      </div>
+    </section>
+
+    <!-- Add Field Form Section -->
+    <section class="card form-card">
+      <div class="card-head">
+        <div>
+          <h2>Add New Field</h2>
+          <p class="section-desc">Configure crop type, land area, and automated irrigation moisture threshold.</p>
+        </div>
+      </div>
       <form id="fieldForm" class="row">
-        <input type="text" id="fName" placeholder="Field name" required>
-        <input type="text" id="fCrop" placeholder="Crop (Rice, Tomato...)" required>
-        <input type="number" id="fArea" placeholder="Area (acre)" step="0.1" value="1">
-        <input type="number" id="fThreshold" placeholder="Threshold %" value="35">
-        <button type="submit">Add field</button>
+        <div class="input-field">
+          <label for="fName">Field Name</label>
+          <input type="text" id="fName" placeholder="e.g. North Plot" required>
+        </div>
+        <div class="input-field">
+          <label for="fCrop">Crop Type</label>
+          <input type="text" id="fCrop" placeholder="e.g. Rice, Tomato, Wheat" required>
+        </div>
+        <div class="input-field narrow">
+          <label for="fArea">Area (Acre)</label>
+          <input type="number" id="fArea" placeholder="Area" step="0.1" min="0.1" value="1">
+        </div>
+        <div class="input-field narrow">
+          <label for="fThreshold">Threshold %</label>
+          <input type="number" id="fThreshold" placeholder="Threshold %" min="1" max="100" value="35">
+        </div>
+        <div class="form-btn-wrap">
+          <button type="submit" class="submit-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            Add Field
+          </button>
+        </div>
       </form>
     </section>
 
-    <!-- Fields table -->
-    <section class="card">
+    <!-- Fields Table Section -->
+    <section class="card table-card">
       <div class="card-head">
-        <h2>My fields</h2>
         <div>
-          <button class="small" onclick="simulate()">Take sensor reading</button>
-          <button class="small primary" onclick="runAuto()">Run auto irrigation</button>
+          <h2>Monitored Fields</h2>
+          <p class="section-desc">Live soil moisture, threshold comparison, and pump controls.</p>
+        </div>
+        <div class="actions-group">
+          <button class="small" onclick="simulate()" title="Generate simulated readings for all fields">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path>
+            </svg>
+            Take sensor reading
+          </button>
+          <button class="small primary" onclick="runAuto()" title="Evaluate thresholds and trigger pumps automatically">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+            </svg>
+            Run auto irrigation
+          </button>
         </div>
       </div>
-      <table id="fieldTable">
-        <thead>
-          <tr>
-            <th>Field</th><th>Crop</th><th>Moisture</th><th>Threshold</th>
-            <th>Status</th><th>Pump</th><th>Action</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
+      <div class="table-responsive">
+        <table id="fieldTable">
+          <thead>
+            <tr>
+              <th>Field</th>
+              <th>Crop</th>
+              <th>Moisture</th>
+              <th>Threshold</th>
+              <th>Status</th>
+              <th>Pump</th>
+              <th style="text-align: right;">Action</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
     </section>
 
-    <!-- History -->
-    <section class="card">
-      <h2>Irrigation history</h2>
-      <table id="logTable">
-        <thead><tr><th>Time</th><th>Field</th><th>Action</th><th>By</th><th>Moisture</th></tr></thead>
-        <tbody></tbody>
-      </table>
+    <!-- Irrigation History Section -->
+    <section class="card table-card">
+      <div class="card-head">
+        <div>
+          <h2>Irrigation Audit History</h2>
+          <p class="section-desc">Log of recent manual and automated pump operations.</p>
+        </div>
+        <button class="small refresh-btn" onclick="refresh()" title="Reload history">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M23 4v6h-6"></path>
+            <path d="M1 20v-6h6"></path>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+          </svg>
+          Refresh
+        </button>
+      </div>
+      <div class="table-responsive">
+        <table id="logTable">
+          <thead>
+            <tr>
+              <th>Timestamp</th>
+              <th>Field</th>
+              <th>Pump Action</th>
+              <th>Trigger Type</th>
+              <th>Moisture at Trigger</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
     </section>
   </main>
 
