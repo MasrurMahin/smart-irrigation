@@ -67,17 +67,27 @@ function refresh() {
 // ---- actions ----
 document.getElementById('fieldForm').onsubmit = async (e) => {
   e.preventDefault();
+  const name = document.getElementById('fName').value.trim();
+  const crop = document.getElementById('fCrop').value.trim();
+  const area = parseFloat(document.getElementById('fArea').value);
+  const threshold = parseInt(document.getElementById('fThreshold').value, 10);
+
+  if (!name || !crop) {
+    return showMessage('Please provide both field name and crop type.', true);
+  }
+  if (isNaN(area) || area <= 0) {
+    return showMessage('Area must be greater than 0.', true);
+  }
+  if (isNaN(threshold) || threshold < 1 || threshold > 100) {
+    return showMessage('Threshold must be between 1% and 100%.', true);
+  }
+
   try {
-    await callApi('/api/fields', 'POST', {
-      name: document.getElementById('fName').value,
-      crop: document.getElementById('fCrop').value,
-      area: document.getElementById('fArea').value,
-      threshold: document.getElementById('fThreshold').value
-    });
+    await callApi('/api/fields', 'POST', { name, crop, area, threshold });
     e.target.reset();
     document.getElementById('fArea').value = 1;
     document.getElementById('fThreshold').value = 35;
-    showMessage('Field added.');
+    showMessage('Field added successfully.');
     refresh();
   } catch (err) { showMessage(err.message, true); }
 };
@@ -92,9 +102,11 @@ async function pump(id, state) {
 
 async function removeField(id) {
   if (!confirm('Delete this field?')) return;
-  await callApi(`/api/fields/${id}`, 'DELETE');
-  showMessage('Field deleted.');
-  refresh();
+  try {
+    const data = await callApi(`/api/fields/${id}`, 'DELETE');
+    showMessage(data.message || 'Field deleted.');
+    refresh();
+  } catch (err) { showMessage(err.message, true); }
 }
 
 async function simulate() {
