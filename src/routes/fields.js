@@ -28,37 +28,91 @@ router.get('/fields', checkLogin, async (req, res) => {
 // add a new field
 router.post('/fields', checkLogin, async (req, res) => {
   const { name, crop, area, threshold } = req.body;
-  if (!name || !crop) return res.status(400).json({ error: 'Field name and crop are required.' });
+  if (!name || typeof name !== 'string' || !name.trim()) {
+    return res.status(400).json({ error: 'Field name is required.' });
+  }
+  if (!crop || typeof crop !== 'string' || !crop.trim()) {
+    return res.status(400).json({ error: 'Crop type is required.' });
+  }
+
+  const parsedArea = area !== undefined && area !== '' ? parseFloat(area) : 1.0;
+  if (isNaN(parsedArea) || parsedArea <= 0 || parsedArea > 999.99) {
+    return res.status(400).json({ error: 'Area must be a positive number up to 999.99 acres/hectares.' });
+  }
+
+  const parsedThreshold = threshold !== undefined && threshold !== '' ? parseInt(threshold, 10) : 35;
+  if (isNaN(parsedThreshold) || parsedThreshold < 1 || parsedThreshold > 100) {
+    return res.status(400).json({ error: 'Moisture threshold must be between 1% and 100%.' });
+  }
 
   await db.query(
     'INSERT INTO fields (user_id, name, crop, area, threshold) VALUES ($1, $2, $3, $4, $5)',
-    [req.session.userId, name, crop, area || 1, threshold || 35]
+    [req.session.userId, name.trim(), crop.trim(), parsedArea, parsedThreshold]
   );
   res.json({ message: 'Field added.' });
 });
 
-// delete a field
+// delete a field (verifies user ownership)
 router.delete('/fields/:id', checkLogin, async (req, res) => {
-  await db.query('DELETE FROM fields WHERE id = $1 AND user_id = $2', [req.params.id, req.session.userId]);
+  const result = await db.query(
+    'DELETE FROM fields WHERE id = $1 AND user_id = $2',
+    [req.params.id, req.session.userId]
+  );
+  if (result.rowCount === 0) {
+    return res.status(404).json({ error: 'Field not found or access denied.' });
+  }
   res.json({ message: 'Field deleted.' });
 });
 
 // save one sensor reading (sent by hardware, or generated below)
 router.post('/fields/:id/reading', checkLogin, async (req, res) => {
   const { moisture, temperature, humidity } = req.body;
-  if (moisture === undefined || moisture < 0 || moisture > 100) {
-    return res.status(400).json({ error: 'Moisture must be between 0 and 100.' });
+
+  // Verify field ownership
+  const fieldCheck = await db.query(
+    'SELECT id FROM fields WHERE id = $1 AND user_id = $2',
+    [req.params.id, req.session.userId]
+  );
+  if (fieldCheck.rows.length === 0) {
+    return res.status(404).json({ error: 'Field not found or access denied.' });
+  }
+
+  const parsedMoisture = parseFloat(moisture);
+  if (moisture === undefined || isNaN(parsedMoisture) || parsedMoisture < 0 || parsedMoisture > 100) {
+    return res.status(400).json({ error: 'Moisture must be a valid percentage between 0 and 100.' });
+  }
+
+  const parsedTemp = temperature !== undefined && temperature !== null && temperature !== ''
+    ? parseFloat(temperature)
+    : null;
+  if (parsedTemp !== null && (isNaN(parsedTemp) || parsedTemp < -20 || parsedTemp > 70)) {
+    return res.status(400).json({ error: 'Temperature must be between -20°C and 70°C.' });
+  }
+
+  const parsedHum = humidity !== undefined && humidity !== null && humidity !== ''
+    ? parseFloat(humidity)
+    : null;
+  if (parsedHum !== null && (isNaN(parsedHum) || parsedHum < 0 || parsedHum > 100)) {
+    return res.status(400).json({ error: 'Humidity must be between 0% and 100%.' });
   }
 
   await db.query(
     'INSERT INTO readings (field_id, moisture, temperature, humidity) VALUES ($1, $2, $3, $4)',
-    [req.params.id, moisture, temperature || null, humidity || null]
+    [req.params.id, parsedMoisture, parsedTemp, parsedHum]
   );
   res.json({ message: 'Reading saved.' });
 });
 
-// last 10 readings of one field
+// last 10 readings of one field (verifies user ownership)
 router.get('/fields/:id/readings', checkLogin, async (req, res) => {
+  const fieldCheck = await db.query(
+    'SELECT id FROM fields WHERE id = $1 AND user_id = $2',
+    [req.params.id, req.session.userId]
+  );
+  if (fieldCheck.rows.length === 0) {
+    return res.status(404).json({ error: 'Field not found or access denied.' });
+  }
+
   const result = await db.query(
     'SELECT * FROM readings WHERE field_id = $1 ORDER BY id DESC LIMIT 10', [req.params.id]
   );
