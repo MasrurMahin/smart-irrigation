@@ -67,19 +67,52 @@ router.delete('/fields/:id', checkLogin, async (req, res) => {
 // save one sensor reading (sent by hardware, or generated below)
 router.post('/fields/:id/reading', checkLogin, async (req, res) => {
   const { moisture, temperature, humidity } = req.body;
-  if (moisture === undefined || moisture < 0 || moisture > 100) {
-    return res.status(400).json({ error: 'Moisture must be between 0 and 100.' });
+
+  // Verify field ownership
+  const fieldCheck = await db.query(
+    'SELECT id FROM fields WHERE id = $1 AND user_id = $2',
+    [req.params.id, req.session.userId]
+  );
+  if (fieldCheck.rows.length === 0) {
+    return res.status(404).json({ error: 'Field not found or access denied.' });
+  }
+
+  const parsedMoisture = parseFloat(moisture);
+  if (moisture === undefined || isNaN(parsedMoisture) || parsedMoisture < 0 || parsedMoisture > 100) {
+    return res.status(400).json({ error: 'Moisture must be a valid percentage between 0 and 100.' });
+  }
+
+  const parsedTemp = temperature !== undefined && temperature !== null && temperature !== ''
+    ? parseFloat(temperature)
+    : null;
+  if (parsedTemp !== null && (isNaN(parsedTemp) || parsedTemp < -20 || parsedTemp > 70)) {
+    return res.status(400).json({ error: 'Temperature must be between -20°C and 70°C.' });
+  }
+
+  const parsedHum = humidity !== undefined && humidity !== null && humidity !== ''
+    ? parseFloat(humidity)
+    : null;
+  if (parsedHum !== null && (isNaN(parsedHum) || parsedHum < 0 || parsedHum > 100)) {
+    return res.status(400).json({ error: 'Humidity must be between 0% and 100%.' });
   }
 
   await db.query(
     'INSERT INTO readings (field_id, moisture, temperature, humidity) VALUES ($1, $2, $3, $4)',
-    [req.params.id, moisture, temperature || null, humidity || null]
+    [req.params.id, parsedMoisture, parsedTemp, parsedHum]
   );
   res.json({ message: 'Reading saved.' });
 });
 
-// last 10 readings of one field
+// last 10 readings of one field (verifies user ownership)
 router.get('/fields/:id/readings', checkLogin, async (req, res) => {
+  const fieldCheck = await db.query(
+    'SELECT id FROM fields WHERE id = $1 AND user_id = $2',
+    [req.params.id, req.session.userId]
+  );
+  if (fieldCheck.rows.length === 0) {
+    return res.status(404).json({ error: 'Field not found or access denied.' });
+  }
+
   const result = await db.query(
     'SELECT * FROM readings WHERE field_id = $1 ORDER BY id DESC LIMIT 10', [req.params.id]
   );
