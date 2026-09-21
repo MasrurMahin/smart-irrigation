@@ -44,24 +44,75 @@ async function loadFields() {
 
 // ---- irrigation history (Member 3) ----
 async function loadLogs() {
-  const { logs } = await callApi('/api/logs');
-  const body = document.querySelector('#logTable tbody');
+  try {
+    const { logs } = await callApi('/api/logs');
+    const body = document.querySelector('#logTable tbody');
 
-  body.innerHTML = logs.length
-    ? logs.map(l => `
-      <tr>
-        <td>${new Date(l.created_at).toLocaleString()}</td>
-        <td>${l.field_name}</td>
-        <td>${l.action}</td>
-        <td>${l.trigger_by}</td>
-        <td>${l.moisture !== null ? l.moisture + '%' : '-'}</td>
-      </tr>`).join('')
-    : '<tr><td colspan="5">No irrigation yet.</td></tr>';
+    if (!logs || logs.length === 0) {
+      body.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 18px;">No irrigation history recorded yet.</td></tr>';
+      return;
+    }
+
+    body.innerHTML = logs.map(l => {
+      const actionBadge = `<span class="badge ${l.action === 'START' ? 'badge-start' : 'badge-stop'}">${l.action}</span>`;
+      const triggerBadge = `<span class="badge ${l.trigger_by === 'AUTO' ? 'badge-auto' : 'badge-manual'}">${l.trigger_by}</span>`;
+      const moistureDisplay = l.moisture !== null && l.moisture !== undefined ? `${Number(l.moisture)}%` : '<span style="color: #94a3b8;">-</span>';
+      const timeFormatted = new Date(l.created_at).toLocaleString();
+
+      return `
+        <tr>
+          <td>${timeFormatted}</td>
+          <td><strong>${l.field_name}</strong></td>
+          <td>${actionBadge}</td>
+          <td>${triggerBadge}</td>
+          <td>${moistureDisplay}</td>
+        </tr>`;
+    }).join('');
+  } catch (err) {
+    console.error('Error loading logs:', err);
+  }
+}
+
+// ---- metrics overview (Member 3) ----
+async function updateMetrics() {
+  try {
+    const [fieldsData, logsData] = await Promise.all([
+      callApi('/api/fields'),
+      callApi('/api/logs')
+    ]);
+
+    const fields = fieldsData.fields || [];
+    const logs = logsData.logs || [];
+
+    const totalEl = document.getElementById('statTotalFields');
+    if (totalEl) totalEl.textContent = fields.length;
+
+    const pumpEl = document.getElementById('statActivePumps');
+    const activePumps = fields.filter(f => f.pump_status === 'ON').length;
+    if (pumpEl) pumpEl.textContent = activePumps;
+
+    const pulseDot = document.getElementById('pumpPulseDot');
+    if (pulseDot) {
+      if (activePumps > 0) pulseDot.classList.add('active');
+      else pulseDot.classList.remove('active');
+    }
+
+    const dryEl = document.getElementById('statDryFields');
+    if (dryEl) {
+      dryEl.textContent = fields.filter(f => f.status === 'dry').length;
+    }
+
+    const logsEl = document.getElementById('statTotalLogs');
+    if (logsEl) logsEl.textContent = logs.length;
+  } catch (err) {
+    // Non-blocking metrics update
+  }
 }
 
 function refresh() {
   loadFields();
   loadLogs();
+  updateMetrics();
 }
 
 // ---- actions ----
@@ -85,7 +136,7 @@ document.getElementById('fieldForm').onsubmit = async (e) => {
 async function pump(id, state) {
   try {
     const data = await callApi(`/api/pump/${id}/${state}`, 'POST');
-    showMessage(data.message);
+    showMessage(data.message || `Pump turned ${state}.`);
     refresh();
   } catch (err) { showMessage(err.message, true); }
 }
@@ -104,9 +155,12 @@ async function simulate() {
 }
 
 async function runAuto() {
-  const { results } = await callApi('/api/auto', 'POST');
-  showMessage(results.join('  |  '));
-  refresh();
+  try {
+    const data = await callApi('/api/auto', 'POST');
+    const results = data.results || [];
+    showMessage(results.length ? results.join('  \u2022  ') : 'Auto irrigation check completed.');
+    refresh();
+  } catch (err) { showMessage(err.message, true); }
 }
 
 async function logout() {
